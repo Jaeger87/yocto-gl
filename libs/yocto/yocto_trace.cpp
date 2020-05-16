@@ -2241,8 +2241,6 @@ static std::pair<vec3f, bool> trace_falsecolor(const trc::scene* scene,
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using sampler_func = std::pair<vec3f, bool> (*)(const trc::scene* scene,
-    const ray3f& ray, rng_state& rng, const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
     case sampler_type::path: return trace_path;
