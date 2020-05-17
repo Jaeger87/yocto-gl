@@ -311,7 +311,7 @@ static ray3f eval_camera(
 }
 
 // Sample camera
-static ray3f sample_camera(const trc::camera* camera, const vec2i& ij,
+ray3f sample_camera(const trc::camera* camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
   if (!tent) {
     auto uv = vec2f{
@@ -2240,8 +2240,9 @@ static std::pair<vec3f, bool> trace_falsecolor(const trc::scene* scene,
   }
 }
 
+
 // Trace a single ray from the camera using the given algorithm.
-static sampler_func get_trace_sampler_func(const trace_params& params) {
+sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
     case sampler_type::path: return trace_path;
     case sampler_type::naive: return trace_naive;

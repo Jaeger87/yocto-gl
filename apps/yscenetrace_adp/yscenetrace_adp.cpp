@@ -231,8 +231,8 @@ int main(int argc, const char* argv[]) {
   // parse command line
   auto cli = cli::make_cli("yscntrace_adp", " Offline adaptive path tracing");
   add_option(cli, "--quality,-q", params.desired_q, "Trace by quality");
-  add_option(cli, "--spp", params.desired_spp, "Trace by spp");
-  add_option(cli, "--seconds", params.desired_seconds, "Trace by time (seconds)");
+  add_option(cli, "--spp,-s", params.desired_spp, "Trace by spp");
+  add_option(cli, "--seconds,-S", params.desired_seconds, "Trace by time (seconds)");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", params.trc_params.resolution, "Image resolution.");
   add_option(
