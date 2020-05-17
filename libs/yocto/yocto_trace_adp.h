@@ -171,12 +171,12 @@ inline std::string format_q_step(float current_q, float final_q) {
   
   if (final_q > 0) {
     if (current_q >= 0) {
-      sprintf(buffer, "%03d-%03d", (int) (current_q * 100.0f), (int) (final_q * 100.0f));
+      sprintf_s(buffer, sizeof(buffer), "%03d-%03d", (int) (current_q * 100.0f), (int) (final_q * 100.0f));
     } else {
-      sprintf(buffer, "----%03d", (int) (final_q * 100.0f));
+      sprintf_s(buffer, sizeof(buffer), "----%03d", (int) (final_q * 100.0f));
     }
   } else {
-      sprintf(buffer, "----%03d", (int) (final_q * 100.0f));
+      sprintf_s(buffer, sizeof(buffer), "----%03d", (int) (final_q * 100.0f));
   }
   
   return buffer;

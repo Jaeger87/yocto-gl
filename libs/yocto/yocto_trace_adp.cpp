@@ -424,7 +424,6 @@ img::image<vec4f> trace_image(state* state_ptr, const trc::scene* scene, const t
   vec2i size = state_ptr->render.size();
 
   if (progress_cb) progress_cb(state_ptr, "initial samples", get_actual_progress(state_ptr, params), get_max_progress(params));
-  
   state_ptr->curr_q = -1.0f;
 
   for(auto sampled = 0; sampled < params.min_samples; sampled += params.sample_step) {
