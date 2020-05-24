@@ -148,7 +148,7 @@ struct adp_params {
   int               min_samples     = 32;
   int               max_samples     = 262144;
   int               sample_step     = 8;
-  float             desired_q       = 5.0f;
+  float             desired_q       = -1.0f;
   int               desired_spp     = 0;
   int               desired_seconds = 0;
   float             step_q          = 1.0/4.0;

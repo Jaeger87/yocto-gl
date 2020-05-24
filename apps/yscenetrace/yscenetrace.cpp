@@ -31,11 +31,13 @@
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_trace.h>
+#include <yocto/yocto_trace_adp.h>
 using namespace yocto::math;
 namespace sio = yocto::sceneio;
 namespace img = yocto::image;
 namespace cli = yocto::commonio;
 namespace trc = yocto::trace;
+namespace adp = yocto::trace_adp;
 
 #include <map>
 #include <memory>
@@ -169,35 +171,102 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
   camera = camera_map.at(iocamera);
 }
 
+void save_batch_img(std::string imfilename, img::image<vec4b> img, std::string part_name, float step_q, float max_q) {
+  auto str_q_step = adp::format_q_step(step_q, max_q);
+  auto ext = part_name + "." + str_q_step + sfs::path(imfilename).extension().string();
+  auto actual_filename = sfs::path(imfilename).replace_extension(ext).string();            
+  auto ioerror = ""s;
+  
+  if (!save_image(actual_filename, img, ioerror))
+          cli::print_fatal(ioerror);
+}
+
+void save_batch_img(std::string imfilename, img::image<vec4f> img, std::string part_name, float step_q, float max_q) {
+  auto str_q_step = adp::format_q_step(step_q, max_q);
+  auto ext = part_name + "." + str_q_step + sfs::path(imfilename).extension().string();
+  auto actual_filename = sfs::path(imfilename).replace_extension(ext).string();            
+  auto ioerror = ""s;
+        
+  if (!save_image(actual_filename, img, ioerror))
+          cli::print_fatal(ioerror);
+}
+
+void save_log(std::string imfilename, std::string log) {
+  auto log_filename = sfs::path(imfilename).replace_extension("log").string();            
+  auto ioerror = ""s;
+
+  auto previous_log = ""s;
+  auto new_log = ""s;
+
+  if (!yocto::commonio::load_text(log_filename, previous_log, ioerror)) {
+    previous_log = ""s;
+  }
+
+  new_log = previous_log + log;
+        
+  if (!yocto::commonio::save_text(log_filename, new_log, ioerror))
+      cli::print_fatal(ioerror);
+}
+
+void print_status(adp::state* state, std::string current_action, int actual, int final) {
+  char buffer[255];
+  auto stats = adp::statistic{};
+  
+  collect_statistics(stats, state);
+  
+  sprintf_s(buffer,sizeof(buffer), "tracing. spp: %8.2f, q: %4.2f, %s", stats.avg_spp, state->curr_q, current_action.c_str());
+  
+  cli::print_progress(buffer, actual, final);    
+}
+
 int main(int argc, const char* argv[]) {
   // options
-  auto params      = trc::trace_params{};
+  auto params      = adp::adp_params{};
   auto save_batch  = false;
   auto add_skyenv  = false;
   auto camera_name = ""s;
   auto imfilename  = "out.hdr"s;
   auto filename    = "scene.json"s;
+  auto use_adp = true; 
 
   // parse command line
-  auto cli = cli::make_cli("yscntrace", "Offline path tracing");
+  auto cli = cli::make_cli("yscntrace_adp", " Offline adaptive path tracing");
+  add_option(cli, "--quality,-q", params.desired_q, "Trace by quality");
+  add_option(cli, "--spp", params.desired_spp, "Trace by spp");
+  add_option(cli, "--seconds", params.desired_seconds, "Trace by time (seconds)");
   add_option(cli, "--camera", camera_name, "Camera name.");
-  add_option(cli, "--resolution,-r", params.resolution, "Image resolution.");
-  add_option(cli, "--samples,-s", params.samples, "Number of samples.");
+  add_option(cli, "--samples,-s", params.trc_params.samples, "Number of samples.");
+  add_option(cli, "--resolution,-r", params.trc_params.resolution, "Image resolution.");
   add_option(
-      cli, "--tracer,-t", params.sampler, "Trace type.", trc::sampler_names);
-  add_option(cli, "--falsecolor,-F", params.falsecolor,
+      cli, "--tracer,-t", params.trc_params.sampler, "Trace type.", trc::sampler_names);
+  add_option(cli, "--falsecolor,-F", params.trc_params.falsecolor,
       "Tracer false color type.", trc::falsecolor_names);
-  add_option(cli, "--bounces,-b", params.bounces, "Maximum number of bounces.");
-  add_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
-  add_option(cli, "--filter/--no-filter", params.tentfilter, "Filter image.");
-  add_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
+  add_option(cli, "--bounces,-b", params.trc_params.bounces, "Maximum number of bounces.");
+  add_option(cli, "--clamp", params.trc_params.clamp, "Final pixel clamping.");
+  add_option(cli, "--filter/--no-filter", params.trc_params.tentfilter, "Filter image.");
+  add_option(cli, "--env-hidden/--no-env-hidden", params.trc_params.envhidden,
       "Environments are hidden in renderer");
   add_option(cli, "--save-batch", save_batch, "Save images progressively");
-  add_option(cli, "--bvh", params.bvh, "Bvh type", trc::bvh_names);
+  add_option(cli, "--bvh", params.trc_params.bvh, "Bvh type", trc::bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output-image,-o", imfilename, "Image filename");
+  add_option(cli, "--save-final-log", params.save_final_log, "Save log and control images at final");
   add_option(cli, "scene", filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
+
+
+    if (params.desired_spp > 0 && params.desired_seconds > 0) {
+    cli::print_info("error: cannot define time or spp at same time");
+    cli::print_info("");
+    cli::print_info(get_usage(cli));
+    exit(1);
+  }
+
+    if (params.desired_q < 0) {
+    use_adp = false;
+  }
+
+
 
   // scene loading
   auto ioscene_guard = std::make_unique<sio::model>();
@@ -222,19 +291,70 @@ int main(int argc, const char* argv[]) {
   if (ioscene_guard) ioscene_guard.reset();
 
   // build bvh
-  init_bvh(scene, params, cli::print_progress);
+  init_bvh(scene, params.trc_params, cli::print_progress);
 
   // init renderer
   init_lights(scene, cli::print_progress);
 
   // fix renderer type if no lights
-  if (scene->lights.empty() && is_sampler_lit(params)) {
+  if (scene->lights.empty() && is_sampler_lit(params.trc_params)) {
     cli::print_info("no lights presents, switching to eyelight shader");
-    params.sampler = trc::sampler_type::eyelight;
+    params.trc_params.sampler = trc::sampler_type::eyelight;
   }
 
-  // render
-  auto render = trc::trace_image(scene, camera, params, cli::print_progress,
+  std::atomic<bool> running  = false;
+  adp::state* last_state     = nullptr;
+  std::string last_act       = {};
+
+  auto progress_cb = [&last_state, &last_act]
+    (adp::state* state, std::string current_action, int actual, int max) {
+    
+      last_state     = state;
+      last_act       = current_action;
+    
+      print_status(last_state, last_act, actual, max);
+  };
+
+    std::thread([&last_state, &last_act, &running, &params]() {
+    while(true) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000));      
+      if (running.load() == false) {
+        break;
+      }
+      if (last_state != nullptr) {
+        int actual = get_actual_progress(last_state, params);
+        int max   = get_max_progress(params);
+        print_status(last_state, last_act, actual, max);
+      }
+    }
+  }).detach();
+
+
+auto render = img::image<vec4f>();
+    if(use_adp)
+    {
+
+        render = adp::trace_image(nullptr, scene, camera, params, progress_cb,
+      [save_batch, imfilename, &params](const adp::state* state, float curr_q, float desired_q) {
+        if (curr_q != desired_q && !save_batch) return;
+        if (curr_q == desired_q && !params.save_final_log) return;
+                                 
+        adp::statistic stat = {};
+        
+        adp::collect_statistics(stat, state);
+                                 
+        save_batch_img(imfilename, state->render, "actual", curr_q, desired_q);
+        save_batch_img(imfilename, adp::sample_density_img(state, stat), "spl", curr_q, desired_q);
+        save_batch_img(imfilename, adp::q_img(state), "q", curr_q, desired_q);
+        save_log(imfilename, stat.stat_text);
+      });
+
+    }
+
+    else
+    {
+      /* code */
+              render = trc::trace_image(scene, camera, params.trc_params, cli::print_progress,
       [save_batch, imfilename](
           const img::image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
@@ -247,6 +367,11 @@ int main(int argc, const char* argv[]) {
         if (!save_image(outfilename, render, ioerror))
           cli::print_fatal(ioerror);
       });
+    }
+    
+  
+  // render
+
 
   // save image
   cli::print_progress("save image", 0, 1);
