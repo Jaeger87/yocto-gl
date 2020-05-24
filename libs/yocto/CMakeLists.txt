@@ -11,9 +11,19 @@ add_library(yocto
   ext/tinyexr.h ext/tinyexr.cpp
 )
 
+target_include_directories(yocto PUBLIC
+  ${CMAKE_CURRENT_LIST_DIR}
+)
+target_link_libraries(yocto PUBLIC yocto_adp)
+
 add_library(yocto_adp
   yocto_trace_adp.h yocto_trace_adp.cpp
 )
+
+target_include_directories(yocto_adp PUBLIC
+  ${CMAKE_CURRENT_LIST_DIR}
+)
+target_link_libraries(yocto_adp PUBLIC yocto)
 
 set_target_properties(yocto PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 set_target_properties(yocto_adp PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)

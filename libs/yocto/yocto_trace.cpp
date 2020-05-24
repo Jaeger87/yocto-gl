@@ -27,6 +27,7 @@
 //
 
 #include "yocto_trace.h"
+#include "yocto_trace_adp.h"
 
 #include <atomic>
 #include <cstring>
@@ -43,7 +44,10 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // ALIASES
 // -----------------------------------------------------------------------------
+namespace adp = yocto::trace_adp;
+
 namespace yocto::trace {
+
 
 // import math symbols for use
 using math::abs;
