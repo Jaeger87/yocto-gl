@@ -11,3 +11,9 @@ tests/renderings/*.hdr
 tests1/
 .vs
 testsr/
+
+tests/16_coffee/shapes/
+
+tests/17_kitchen/
+
+tests/16_coffee/

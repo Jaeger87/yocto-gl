@@ -126,7 +126,7 @@ struct statistic {
   std::string stat_text = "";
 };
 
-using time_point = std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>>;
+using time_point = std::chrono::time_point<std::chrono::system_clock>;
 
 // [experimental] Asynchronous state
 struct state {
