@@ -221,15 +221,15 @@ void trace_sample(state* state, const trc::scene* scene,
 }
 
 void trace_until_quality(state* state, const trc::scene* scene,
-    const trc::camera* camera, const vec2i& ij, const adp_params& params, float q) {
-  auto& pixel   = state->pixels[ij];
+    const trc::camera* camera, const vec2i& ij, const adp_params& params, float q) { //Si ferma se raggiunge la qualità?
+  auto& pixel   = state->pixels[ij];  //prende l'insieme di pixel
   
-  trace_sample(state, scene, camera, ij, params.sample_step, params);
-  if (checkEnd(state, params)) {
+  trace_sample(state, scene, camera, ij, params.sample_step, params);  // fa il trace con quel sample step
+  if (checkEnd(state, params)) {  //Questa funzione controlla se deve fermarsi l'esecuzione (renderei bool trace_sample)
     return;
   }
   
-  while(pixel.q < q) {
+  while(pixel.q < q) { //pixel è una struttura dati sua  Qui inizia il ciclo (finchè non raggiungo la qualità)
     trace_sample(state, scene, camera, ij, params.sample_step, params);
     if (checkEnd(state, params)) {
       return;
@@ -238,7 +238,7 @@ void trace_until_quality(state* state, const trc::scene* scene,
 }
 
 void trace_by_budget(state* state, const trc::scene* scene,
-    const trc::camera* camera, const vec2i& ij, const adp_params& params) {
+    const trc::camera* camera, const vec2i& ij, const adp_params& params) { //Usato solo da statistics (forse inutile)
   auto& pixel   = state->pixels[ij];
   
   trace_sample(state, scene, camera, ij, pixel.sample_budget, params);
@@ -246,7 +246,7 @@ void trace_by_budget(state* state, const trc::scene* scene,
 }
 
 void trace_by_budget_or_q_below(state* state, const trc::scene* scene,
-    const trc::camera* camera, const vec2i& ij, const adp_params& params, float step_q) {
+    const trc::camera* camera, const vec2i& ij, const adp_params& params, float step_q) {  //Inutilizzata
   auto& pixel   = state->pixels[ij];
 
   int sample_max = pixel.actual.samples + pixel.sample_budget;
@@ -266,8 +266,9 @@ struct sample_spread {
   float       div = 0;
 };
 
-void create_sample_spread(std::vector<sample_spread> &spread_vec, const float step_q) {  
-  int radius = 10;
+//step_q Sarà la qualità a quanto è arrivato?
+void create_sample_spread(std::vector<sample_spread> &spread_vec, const float step_q) {    //Qui calcola la grandezza delle aeree che sono cerchi.
+  int radius = 10; // 10 non esiste
   if(step_q <= 1.99) {
     radius = 4;
   } else if (step_q <= 3.99) {
@@ -276,7 +277,10 @@ void create_sample_spread(std::vector<sample_spread> &spread_vec, const float st
     radius = 1;
   }
 
-  spread_vec.clear();
+  /*
+  Quella cosa di prima mi convince poco
+  */
+  spread_vec.clear(); //distrugge il vettore delle zone
   for(auto i = -radius; i <= radius; i++) {
     for(auto j = -radius; j <= radius; j++) {
       
@@ -287,10 +291,10 @@ void create_sample_spread(std::vector<sample_spread> &spread_vec, const float st
       spread.y = j;
       spread.div = 1;
       if (radius == 1) {
-        spread_vec.emplace_back(spread);
+        spread_vec.emplace_back(spread); //appende elemento
       } else {
         float dist = sqrtf((float) (i * i) + (j * j));
-        if (dist <= radius) spread_vec.emplace_back(spread);
+        if (dist <= radius) spread_vec.emplace_back(spread); //distanza maggiore di radius non appende
       }
     }
   }
@@ -400,6 +404,11 @@ void collect_statistics(statistic& stat, const state* state) {
                    "      max_spp: " + std::to_string(stat.max_spp) + "\n" +
                    "sampling time: " + mins + ":" + secs + "." + msecs + "\n";  
 }
+
+
+
+
+
 
 img::image<vec4f> trace_image(state* state_ptr, const trc::scene* scene, const trc::camera* camera, const adp_params& params,
                               progress_callback progress_cb, batch_callback batch_cb) {
