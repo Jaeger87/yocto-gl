@@ -260,7 +260,7 @@ void trace_by_budget_or_q_below(state* state, const trc::scene* scene,
 }
 
 
-struct sample_spread {
+struct sample_spread {  //Il cerchio, la zona
   signed char   x = 0;
   signed char   y = 0;
   float       div = 0;
@@ -301,7 +301,7 @@ void create_sample_spread(std::vector<sample_spread> &spread_vec, const float st
 }
 
 
-std::vector<vec2i> all_image_ij(state* state) {
+std::vector<vec2i> all_image_ij(state* state) {  //Credo che crei le  coppie ij
   std::vector<vec2i> to_return = std::vector<vec2i>{};
 
   auto size = state->render.size();
@@ -322,7 +322,7 @@ inline void parallel_pixels_in_list(state* state_ptr, const adp_params& params,
   auto  futures      = std::vector<std::future<void>>(nthreads);
   std::atomic<int> next_idx(0);
   
-    // sample cada pixel selecionado
+    // sample cada pixel selecionado  SPAGNOLO?
     futures.clear();
     next_idx.store(0);
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
@@ -411,7 +411,7 @@ void collect_statistics(statistic& stat, const state* state) {
 
 
 img::image<vec4f> trace_image(state* state_ptr, const trc::scene* scene, const trc::camera* camera, const adp_params& params,
-                              progress_callback progress_cb, batch_callback batch_cb) {
+                              progress_callback progress_cb, batch_callback batch_cb) {   //LUI  //Parallelo?
   
   std::unique_ptr<state> state_guard;
   
@@ -426,22 +426,22 @@ img::image<vec4f> trace_image(state* state_ptr, const trc::scene* scene, const t
   
   
   // Somewhat expensive actions.
-  init_state(state_ptr, scene, camera, params.trc_params);
+  init_state(state_ptr, scene, camera, params.trc_params);  //inizio algoritmo
   spread_vec = std::vector<sample_spread>();
-  create_sample_spread(spread_vec, step_q);
+  create_sample_spread(spread_vec, step_q);   //Crea i sample spread a qualità 0
   
-  vec2i size = state_ptr->render.size();
+  vec2i size = state_ptr->render.size();  //size immagine
 
-  if (progress_cb) progress_cb(state_ptr, "initial samples", get_actual_progress(state_ptr, params), get_max_progress(params));
+  if (progress_cb) progress_cb(state_ptr, "initial samples", get_actual_progress(state_ptr, params), get_max_progress(params)); //Credo stampi solo roba
   state_ptr->curr_q = -1.0f;
 
-  for(auto sampled = 0; sampled < params.min_samples; sampled += params.sample_step) {
+  for(auto sampled = 0; sampled < params.min_samples; sampled += params.sample_step) {  //min_samples???  Sta fisso a 32
     parallel_pixels_in_list(state_ptr, params, all_image_ij(state_ptr), 
                             [state_ptr, scene, camera, &params](const vec2i& ij) {
-        trace_sample(state_ptr, scene, camera, ij, params.sample_step, params);
+        trace_sample(state_ptr, scene, camera, ij, params.sample_step, params);  //sample step è fisso a 8
     });
   }
-  
+  //Da quello che ho capito qui si preoccupa di fare un primo passo per mandare un minimo di sample
   
   if (batch_cb) batch_cb(state_ptr, state_ptr->curr_q, params.desired_q);
   float next_batch = state_ptr->curr_q + params.batch_step;
@@ -450,14 +450,14 @@ img::image<vec4f> trace_image(state* state_ptr, const trc::scene* scene, const t
     state_ptr->ij_by_q.clear();    
     for(int j = 0; j < size.y; j++) {
       for(int i = 0; i < size.x; i++) {
-        auto& pixel = state_ptr->pixels[{i,j}];
-        pixel.sample_budget = 0;
+        auto& pixel = state_ptr->pixels[{i,j}]; //prendo il pixel
+        pixel.sample_budget = 0; 
         if (pixel.q < step_q) {
-          state_ptr->ij_by_q.push_back({i, j});
+          state_ptr->ij_by_q.push_back({i, j}); //Si salva qui quelli ancora sotto la qualità...Potrei fare due liste
         }
       }      
     }
-    
+
     // trace samples for each pixel until it reaches the actual quality step.
     if (progress_cb) progress_cb(state_ptr, "samples by quality", 
                                  get_actual_progress(state_ptr, params), 
@@ -465,9 +465,9 @@ img::image<vec4f> trace_image(state* state_ptr, const trc::scene* scene, const t
     parallel_pixels_in_list(state_ptr, params, state_ptr->ij_by_q, 
                             [state_ptr, scene, camera, &params, step_q](const vec2i& ij) {
           trace_until_quality(state_ptr, scene, camera, ij, params, step_q);
-    });
+    }); // Fa il trace di solo quelli in quella lista
 
-    // here is supposed that every pixel in image has quality > step_q
+    // here is supposed that every pixel in image has quality > step_q  
     // trace pixels in neighborhood until pixel budget is reached or if quality drops below step_q to
     // restart de process
     state_ptr->ij_by_proximity.clear();
@@ -522,6 +522,7 @@ img::image<vec4f> trace_image(state* state_ptr, const trc::scene* scene, const t
       }
     }
     
+    //Qui capisce se la qualità corrente è allo step_q
     state_ptr->min_q = tmp_min_q;
     if (state_ptr->min_q >= step_q) {
       state_ptr->curr_q = step_q;
@@ -531,7 +532,7 @@ img::image<vec4f> trace_image(state* state_ptr, const trc::scene* scene, const t
         next_batch = state_ptr->curr_q + params.batch_step;
       }
       step_q += params.step_q;
-      create_sample_spread(spread_vec, step_q);
+      create_sample_spread(spread_vec, step_q); //ricalcolo cerchio per zona
       
       if (params.desired_seconds == 0 
         && params.desired_spp == 0 
@@ -550,6 +551,10 @@ img::image<vec4f> trace_image(state* state_ptr, const trc::scene* scene, const t
   
   return state_ptr->render;
 }
+
+
+
+
 
 img::image<vec4b> sample_density_img(const state* state, statistic& stat) {
   img::image<vec4b> img = {};
