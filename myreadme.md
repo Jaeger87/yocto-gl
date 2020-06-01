@@ -11,13 +11,22 @@ The main objectives of this project are to integrate [this adaptive rendering al
 
 # Integration with yocto
 
-The **Adaptive rendering algorithm** works on top of the render algorithm so it is pretty easy to add it on Yocto. 
+The **Adaptive rendering algorithm** works on top of the render algorithm so it is pretty easy to add it on Yocto. In the original implementation, the author put his code in the `yocto/yocto_trace_adp.{h,cpp}` files and create a brand new application, the `apps/yscenetrace_adp.cpp` that has a similar command line interface as `apps/yscenetrace.cpp` except for the followings parameters:
 
+| Parameter | Descpription |
+| ------ | ------ |
+| --quality, -q | (Mandatory) Set the target quality for the output image (in range 3:6) |
+| --spp | Sample the image up to a specific sample per pixel. (Not settable with seconds)|
+| --seconds | Sample the image for a specified time. (Not settable with spp)|
 
+To integrate this work in the actual yocto release, instead of leave the adaptive sampling in his own application I shift it into the yscenetrace app, so with only one application is possible to use the adaptive sampling or the default. To understand if the user wants to use adaptive sampling, the application checks if the user sets the quality parameter, if not default sampling is used.
 
-
+To make this change, I imported the `yocto/yocto_trace_adp.{h,cpp}` files, edit the `yocto/CMakeLists.txt` and finally edit the main function of `apps/yscenetrace_adp.cpp` in order to switch sampling strategy based on the quality parameters.
 
 # Comparison between adaptive sampling and the standard yocto sampling
+
+
+
 
 # My attempts to improve the algorithm
 
