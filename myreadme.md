@@ -6,6 +6,7 @@ The main objectives of this project are to integrate [this adaptive rendering al
   - Integration with yocto
   - Comparison between adaptive sampling and the standard yocto sampling
   - My attempts to improve the algorithm
+  - Final considerations
 
 
 
@@ -25,10 +26,52 @@ To make this change, I imported the `yocto/yocto_trace_adp.{h,cpp}` files, edit 
 
 # Comparison between adaptive sampling and the standard yocto sampling
 
+### Feature 1 test
+For the first comparison test I taken the features 1 scene and i made , 
+![512 sample - no adaptive sampling](out/readmeimg/NOadp_512_features.jpg)
+
+As we can clearly see, There is some noise in the red sphere and a lots of noise in the green rabbit, the rest of the image is pretty clear. To make this render on my machine it took 15 minutes.
 
 
+
+
+![512 sample - no adaptive sampling](out/readmeimg/adpFeaturesOld_512.jpg)
+We have significant improvement in the critical areas of the scene, unfortunatly we have some noise spread in the rest of the image. To render this it took 27 minutes, almost the double of the time respect the no adaptive sample version.
+
+
+### Kitchen test
+
+Next i moved in a more complex scene, I tried with the kitchen:
+![512 sample - no adaptive sampling](out/readmeimg/NOadp_1024_kitchen.jpg)
+
+The image has lots of noise spread and not concentrate in some areas. To make this render on my machine it took 115 minutes.
+
+![512 sample - no adaptive sampling](out/readmeimg/NOadp_1024_kitchen.jpg)
+
+In this case the algorithm did not succed to 
 
 # My attempts to improve the algorithm
+
+### Merging the two technics
+
+The features1 test inspired me to make a simple test, to reach the quality of a X sample image made without adaptive, i take a X/2 sample image made without adaptve and a X/4 sample image made with adaptive. Than i merge this two images by take the best pixels of every image. in order to choose the best pixels i used an image produced by the adaptive sampling application that shows which pixels received more sample, so by using that image I can select the best pixels in adaptive sampling image and put them on the other image. The script that merge images is `out/matlab test/merge.m`.
+
+![512 sample - no adaptive sampling](out/readmeimg/NOadp_512_features.jpg)
+This is the target image (15 minutes)
+
+
+
+![512 sample - no adaptive sampling](out/readmeimg/04-merge.jpg)
+And this is the final merge image that it took 14 minutes.
+
+This experiment worked on this scene but it fail in a complex scene like the kitchen or the coffee machine. It seems that works only when the adaptive sampling works well. However the experiment highlight some weakness of the algorithm so I tried to analyze the code inside `yocto/yocto_trace_adp.{h,cpp}` and understand what can i made to improve that.
+
+
+### Customizing the algorithm
+
+
+
+# Final considerations
 
 
 [original]: <https://github.com/mkanada/yocto-gl>
@@ -37,43 +80,10 @@ To make this change, I imported the `yocto/yocto_trace_adp.{h,cpp}` files, edit 
 
 
 
-![Image rendered with Yocto/GL path tracer. Model by Disney Animation Studios.](images/island.png)
 
 
 
-You can also:
-  - Import and save files from GitHub, Dropbox, Google Drive and One Drive
-  - Drag and drop markdown and HTML files into Dillinger
-  - Export documents as Markdown, HTML and PDF
 
-Markdown is a lightweight markup language based on the formatting conventions that people naturally use in email.  As [John Gruber] writes on the [Markdown site][df1]
-
-> The overriding design goal for Markdown's
-> formatting syntax is to make it as readable
-> as possible. The idea is that a
-> Markdown-formatted document should be
-> publishable as-is, as plain text, without
-> looking like it's been marked up with tags
-> or formatting instructions.
-
-This text you see here is *actually* written in Markdown! To get a feel for Markdown's syntax, type some text into the left window and watch the results in the right.
-
-### Tech
-
-Dillinger uses a number of open source projects to work properly:
-
-* [AngularJS] - HTML enhanced for web apps!
-* [Ace Editor] - awesome web-based text editor
-* [markdown-it] - Markdown parser done right. Fast and easy to extend.
-* [Twitter Bootstrap] - great UI boilerplate for modern web apps
-* [node.js] - evented I/O for the backend
-* [Express] - fast node.js network app framework [@tjholowaychuk]
-* [Gulp] - the streaming build system
-* [Breakdance](https://breakdance.github.io/breakdance/) - HTML to Markdown converter
-* [jQuery] - duh
-
-And of course Dillinger itself is open source with a [public repository][dill]
- on GitHub.
 
 ### Installation
 
