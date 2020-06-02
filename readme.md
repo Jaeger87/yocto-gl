@@ -1,131 +1,86 @@
-# Yocto/GL: Tiny C++ Libraries for Data-Oriented Physically-based Graphics
+# Final project for the 2020 course fundamentals of computer graphics: Adaptive rendering
 
-![windows build badge](https://github.com/xelatihy/yocto-gl/workflows/windows-build/badge.svg)
-![macos build badge](https://github.com/xelatihy/yocto-gl/workflows/macos-build/badge.svg)
-![ubuntu build badge](https://github.com/xelatihy/yocto-gl/workflows/ubuntu-build/badge.svg)
 
-Yocto/GL is a collection of small C++17 libraries for building
-physically-based graphics algorithms released under the MIT license.
-Yocto/GL is written in a deliberatly data-oriented style for ease of
-development and use.
-Yocto/GL is split into small libraries to make code navigation easier.
-See each header file for documentation.
+The main objectives of this project are to integrate [this adaptive rendering algorithm][original] in the yocto-gl library, analyze his behavior with different scenes and try to improve it. This readme is organized in the following sections:
 
-- `yocto/yocto_math.{h}`: fixed-size vectors, matrices, rigid frames, rays,
-   bounding boxes, transforms, random number generation, color and geometry
-   functions, Perlin noise, shading and integration utilities
-- `yocto/yocto_shape.{h,cpp}`:  various utilities for manipulating
-   triangle meshes, quads meshes and line sets, computation of normals and
-   tangents, linear and Catmull-Clark subdivision, mesh loading and saving,
-   procedural shapes generation, ray intersection and closest point queries of
-   triangle meshes, quads meshes, line sets and instances scenes using a
-   two-level bounding volume hierarchy
-- `yocto/yocto_image.{h,cpp}`: simple image data type, image resizing,
-   tonemapping, color correction, image loading and saving,
-   procedural images, procedural sun-sky, advanced color conversion utilities
-- `yocto/yocto_trace.{h,cpp}`: path tracing of surfaces and hairs supporting
-   area and environment illumination, microfacet GGX and subsurface scattering,
-   multiple importance sampling
-- `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of Ply/Obj/Pbrt/glTF 
-   and a custom and scalable Json format
-- `yocto/yocto_ply.h`: parsing and writing for Ply format
-- `yocto/yocto_obj.h`: parsing and writing for Obj format
-- `yocto/yocto_pbrt.h`: parsing and writing for Pbrt format
-- `yocto/yocto_commonio.h`: printing utilities, file io utilities,
-  command line parsing
-- `yocto/yocto_common.h`: container, iterators and concurrency utilities
+  - Integration with yocto
+  - Comparison between adaptive sampling and the standard yocto sampling
+  - My attempts to improve the algorithm
+  - Final considerations
 
-You can see Yocto/GL in action in the following applications written to
-test the library:
 
-- `apps/yscenetrace.cpp`:   command-line path-tracer
-- `apps/ysceneitrace.cpp`:  interactive path-tracer
-- `apps/ysceneitraces.cpp`: simpler version of `apps/ysceneitrace.cpp` for demos
-- `apps/ysceneproc.cpp`: command-line scene manipulation and conversion
-- `apps/yshapeproc.cpp`: command-line mesh manipulation and conversion
-- `apps/yimageview.cpp`: Hdr/Ldr image viewer with tonemapping and color grading
-- `apps/yimageviews.cpp`: simpler version of `apps/yimageview.cpp` for demos
-- `apps/yimageproc.cpp`: command-line image manipulation
-- `apps/ysceneview.cpp`: simple OpenGL viewer
 
-Here are some test images rendered with the path tracer. More images are
-included in the [project site](https://xelatihy.github.io/yocto-gl/).
+# Integration with yocto
 
-![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/features1.png)
+The **Adaptive rendering algorithm** works on top of the render algorithm so it is pretty easy to add it on Yocto. In the original implementation, the author put his code in the `yocto/yocto_trace_adp.{h,cpp}` files and create a brand new application, the `apps/yscenetrace_adp.cpp` that has a similar command line interface as `apps/yscenetrace.cpp` except for the followings parameters:
 
-![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](images/features2.png)
+| Parameter | Descpription |
+| ------ | ------ |
+| --quality, -q | (Mandatory) Set the target quality for the output image (in range 3:6) |
+| --spp | Sample the image up to a specific sample per pixel. (Not settable with seconds)|
+| --seconds | Sample the image for a specified time. (Not settable with spp)|
 
-![Image rendered with Yocto/GL path tracer. Model by Disney Animation Studios.](images/island.png)
+To integrate this work in the actual yocto release, instead of leave the adaptive sampling in his own application I shift it into the yscenetrace app, so with only one application is possible to use the adaptive sampling or the default. To understand if the user wants to use adaptive sampling, the application checks if the user sets the quality parameter, if not default sampling is used.
 
-## Design Considerations
+To make this change, I imported the `yocto/yocto_trace_adp.{h,cpp}` files, edit the `yocto/CMakeLists.txt` and finally edit the main function of `apps/yscenetrace_adp.cpp` in order to switch sampling strategy based on the quality parameters.
 
-Yocto/GL follows a "data-oriented programming model" that makes data explicit.
-Data is stored in simple structs and accessed with free functions or directly.
-All data is public, so we make no attempt at encapsulation.
-Most objects is Yocto/GL have value semantic, while large data structures 
-use reference semnatic with strict ownership. This means that everything 
-can be trivially serialized and there is no need for memory management.
+# Comparison between adaptive sampling and the standard yocto sampling
 
-We do this since this makes Yocto/GL easier to extend and quicker to learn,
-with a more explicit data flow that is easier when writing parallel code.
-Since Yocto/GL is mainly used for research and teaching,
-explicit data is both more hackable and easier to understand.
+### Feature 1 test
+For the first comparison test I taken the features 1 scene and i made , 
+![512 sample - no adaptive sampling](out/readmeimg/NOadp_512_features.jpg)
 
-In terms of code style we prefer a functional approach rather than an
-object oriented one, favoring free functions to class methods. All functions
-and data are defined in sibling namespaces contained in the `yocto` namespace 
-so libraries can call all others, but have to do so explicitly. 
+As we can clearly see, There is some noise in the red sphere and a lots of noise in the green rabbit, the rest of the image is pretty clear. To make this render on my machine it took 15 minutes.
 
-The use of templates in Yocto was the reason for many refactorings, going
-from no template to heavy template use. At this point, Yocto uses some templates 
-for readability. In the future, we will increase the use of templates in math 
-code, while keeping many APIs explicitly typed.
 
-We do not use exception for error repoting, but only to report "programmers"
-errors. For example, IO operations use boolean flags and error strings for
-human readable errors, while exceptions are used when preconditions or 
-postconditions are violatd in functions.
 
-The current version of the library (2.x) is a major refacting of the previous 
-library versions (1.x) in three main aspects. First, we now allow the use of 
-reference semantric via pointers and adopt it for all large objects, while 
-keeping value semantic for all others. We did this to avoid erroneous copies
-that cannot detected and avoided at compile time. Second, we had trouble 
-interacting with C libraries that mostly use reference semantic. Third, we
-reduce the use of exceptions, again for better intergration with external code.
 
-## Credits
+![512 sample - no adaptive sampling](out/readmeimg/adpFeaturesOld_512.jpg)
+We have significant improvement in the critical areas of the scene, unfortunatly we have some noise spread in the rest of the image. To render this it took 27 minutes, almost the double of the time respect the no adaptive sample version.
 
-Main contributors:
 
-- Fabio Pellacini (lead developer): [web](http://pellacini.di.uniroma1.it), [github](https://github.com/xelatihy)
-- Edoardo Carra: [github](https://github.com/edoardocarra)
-- Giacomo Nazzaro: [github](https://github.com/giacomonazzaro)
+### Kitchen test
 
-This library includes code from the [PCG random number generator](http://www.pcg-random.org),
-boost `hash_combine`, and public domain code from `github.com/sgorsten/linalg`,
-`gist.github.com/badboy/6267743` and `github.com/nothings/stb_perlin.h`.
-Other external libraries are included with their own license.
+Next i moved in a more complex scene, I tried with the kitchen:
+![512 sample - no adaptive sampling](out/readmeimg/NOadp_1024_kitchen.jpg)
 
-## Compilation
+The image has lots of noise spread and not concentrate in some areas. To make this render on my machine it took 115 minutes.
 
-This library requires a C++17 compiler and is know to compiled on
-OsX (Xcode >= 10), Windows (MSVC 2019) and Linux (gcc >= 7, clang >= 4).
+![512 sample - no adaptive sampling](out/readmeimg/adpKitchenOld1024.jpg)
 
-You can build the example applications using CMake with
-    `mkdir build; cd build; cmake ..; cmake --build .`
+In this case the algorithm did not succed to enhance the quality of the image. The only improvement are on the glass of the microwave and the glass of the oven. For this image it took 106 minutes (little much speed than the no-adaptive).
 
-Yocto/GL depends on `stb_image.h`, `stb_image_write.h`, `stb_image_resize.h` and
-`tinyexr.h` for image loading, saving and resizing,  `cgltf.h` and `json.hpp`
-for glTF and JSON support, and `filesystem.hpp` to support C++17 filesystem API 
-when missing. All dependencies are included in the distribution.
+# My attempts to improve the algorithm
 
-We optionally support building OpenGL demos, which are handled by including
-glad, GLFW, ImGui as dependecies in apps. OpenGL support might eventually
-become part of the Yocto/GL libraries. OpenGL support is enabled by defining
-the cmake option `YOCTO_OPENGL` and contained in the `yocto_gui` library.
+### Merging the two technics
 
-Finally, we optionally support the use of Intel's Embree for ray casting.
-At this point, we rely pon prebuilt binaries distributed by Intel.
-See the main CMake file for how to link to it. Embree support is enabled by
-defining the cmake option `YOCTO_EMBREE`.
+The features1 test inspired me to make a simple test, to reach the quality of a X sample image made without adaptive, i take a X/2 sample image made without adaptve and a X/4 sample image made with adaptive. Than i merge this two images by take the best pixels of every image. in order to choose the best pixels i used an image produced by the adaptive sampling application that shows which pixels received more sample, so by using that image I can select the best pixels in adaptive sampling image and put them on the other image. The script that merge images is `out/matlab test/merge.m`.
+
+![512 sample - no adaptive sampling](out/readmeimg/NOadp_512_features.jpg)
+This is the target image (15 minutes)
+
+
+
+![512 sample - no adaptive sampling](out/readmeimg/04-merge.jpg)
+And this is the final merge image that it took 14 minutes.
+
+This experiment worked on this scene but it fail in a complex scene like the kitchen or the coffee machine. It seems that works only when the adaptive sampling works well. However the experiment highlights some weakness of the algorithm so I tried to analyze the code inside `yocto/yocto_trace_adp.{h,cpp}` and understand what can i made to improve that.
+
+
+### Customizing the algorithm
+
+Analyzing the code I understand why this adaptive sampling leaves noise spread in the image. Basically the algorithm starts with image at quality zero and than it tries to enhance the total image quality step by step (0.25). This means that zones that could reach high quality are penalized by zones hard to render. In order to rebalance the algorithm I made some changes:
+
+  - The algorithm calculate a radius around a pixel based on the actual image quality, I add a bigger radius when the image is at a very low level of quality. 
+  - The original algorithm send samples to a pixel until it reach the current quality step. I put a max limit to the sample to send that is the minimun number of samples taken by a pixel in the previous step.
+  - There is a step in the algorithm where it sends samples to the neighbours of a pixel (that are inside the radius calculate previously) until it reach the same quantity of sample of the pixel. In my version the algorithm sends samples until it reach the half of the samples of the pixel.
+
+Unfortunatly it seems that this version produces output images that are pratically similar to the original version of the algorithm and it is even slower, to produce the feaures 1 image at 512 samples it took 28 minutes
+
+![512 sample - no adaptive sampling](out/readmeimg/adpFeatures512.jpg)
+
+# Final considerations
+
+The original adaptive algorithm can produce images with a better quality but it could be very slower compared to the non adaptive sampling, so it could be unpratical for a production use. The last attempt made me understand that probably what makes this implementation slow is the fact that the algorithm on every iteration creates lot of thread for pixels when instead the original algorithm just create threads at beginning of his execution. I suspect that an implementation that creates less thread or even recycle than could be much faster than the original.
+
+[original]: <https://github.com/mkanada/yocto-gl>
