@@ -64,7 +64,7 @@ This is the target image (15 minutes)
 ![512 sample - no adaptive sampling](out/readmeimg/04-merge.jpg)
 And this is the final merge image that it took 14 minutes.
 
-This experiment worked on this scene but it fail in a complex scene like the kitchen or the coffee machine. It seems that works only when the adaptive sampling works well. However the experiment highlight some weakness of the algorithm so I tried to analyze the code inside `yocto/yocto_trace_adp.{h,cpp}` and understand what can i made to improve that.
+This experiment worked on this scene but it fail in a complex scene like the kitchen or the coffee machine. It seems that works only when the adaptive sampling works well. However the experiment highlights some weakness of the algorithm so I tried to analyze the code inside `yocto/yocto_trace_adp.{h,cpp}` and understand what can i made to improve that.
 
 
 ### Customizing the algorithm
