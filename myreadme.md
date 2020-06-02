@@ -46,9 +46,9 @@ Next i moved in a more complex scene, I tried with the kitchen:
 
 The image has lots of noise spread and not concentrate in some areas. To make this render on my machine it took 115 minutes.
 
-![512 sample - no adaptive sampling](out/readmeimg/NOadp_1024_kitchen.jpg)
+![512 sample - no adaptive sampling](out/readmeimg/adpKitchenOld1024.jpg)
 
-In this case the algorithm did not succed to 
+In this case the algorithm did not succed to enhance the quality of the image. The only improvement are on the glass of the microwave and the glass of the oven. For this image it took 106 minutes (little much speed than the no-adaptive).
 
 # My attempts to improve the algorithm
 
@@ -69,139 +69,18 @@ This experiment worked on this scene but it fail in a complex scene like the kit
 
 ### Customizing the algorithm
 
+Analyzing the code I understand why this adaptive sampling leaves noise spread in the image. Basically the algorithm starts with image at quality zero and than it try to enhance the total image quality step by step. This means that zones that could reach high quality are penalized by zones hard to render. In order to rebalance the algorithm I made some changes:
 
+  - The algorithm calculate a radius around a pixel based on the actual image quality, I add a bigger radius when the image is at a very low level of quality. 
+  - The original algorithm send sample to a pixel until it reach the current quality step. I put a max limit to the sample that is the minimun number of samples taken by a pixel in the previous step.
+  - There is a step in the algorithm where it sends samples to the neighbours of a pixel (that are inside the radius calculate previously) until it reach the same quantity of sample of the pixel. In my version the algorithm sends samples until it reach the half of the samples of the pixel.
+
+Unfortunatly it seems that this version produces output images that are pratically similar to the original version of the algorithm and it is even slower, to produce the feaures 1 image it took 28 minutes
+
+![512 sample - no adaptive sampling](out/readmeimg/adpFeatures512.jpg)
 
 # Final considerations
 
+The original adaptive algorithm can produce image with a better quality but it could be very slower compared to the non adaptive sampling, so it could be unpratical for a production use. The last attempt made me understand that probably what makes this implementation slow is the fact that the algorithm on every iteration creates lot of thread for pixels when instead the original algorithm just create threads at beginning of his execution. I suspect that an implementation that creates less thread or even recycle than could be much faster than the original.
 
 [original]: <https://github.com/mkanada/yocto-gl>
-
-
-
-
-
-
-
-
-
-
-### Installation
-
-Dillinger requires [Node.js](https://nodejs.org/) v4+ to run.
-
-Install the dependencies and devDependencies and start the server.
-
-```sh
-$ cd dillinger
-$ npm install -d
-$ node app
-```
-
-For production environments...
-
-```sh
-$ npm install --production
-$ NODE_ENV=production node app
-```
-
-### Plugins
-
-Dillinger is currently extended with the following plugins. Instructions on how to use them in your own application are linked below.
-
-| Plugin | README |
-| ------ | ------ |
-| Dropbox | [plugins/dropbox/README.md][PlDb] |
-| GitHub | [plugins/github/README.md][PlGh] |
-| Google Drive | [plugins/googledrive/README.md][PlGd] |
-| OneDrive | [plugins/onedrive/README.md][PlOd] |
-| Medium | [plugins/medium/README.md][PlMe] |
-| Google Analytics | [plugins/googleanalytics/README.md][PlGa] |
-
-
-### Development
-
-Want to contribute? Great!
-
-Dillinger uses Gulp + Webpack for fast developing.
-Make a change in your file and instantaneously see your updates!
-
-Open your favorite Terminal and run these commands.
-
-First Tab:
-```sh
-$ node app
-```
-
-Second Tab:
-```sh
-$ gulp watch
-```
-
-(optional) Third:
-```sh
-$ karma test
-```
-#### Building for source
-For production release:
-```sh
-$ gulp build --prod
-```
-Generating pre-built zip archives for distribution:
-```sh
-$ gulp build dist --prod
-```
-
-```sh
-cd dillinger
-docker build -t joemccann/dillinger:${package.json.version} .
-```
-This will create the dillinger image and pull in the necessary dependencies. Be sure to swap out `${package.json.version}` with the actual version of Dillinger.
-
-Once done, run the Docker image and map the port to whatever you wish on your host. In this example, we simply map port 8000 of the host to port 8080 of the Docker (or whatever port was exposed in the Dockerfile):
-
-```sh
-docker run -d -p 8000:8080 --restart="always" <youruser>/dillinger:${package.json.version}
-```
-
-Verify the deployment by navigating to your server address in your preferred browser.
-
-```sh
-127.0.0.1:8000
-```
-
-#### Kubernetes + Google Cloud
-
-See [KUBERNETES.md](https://github.com/joemccann/dillinger/blob/master/KUBERNETES.md)
-
-
-License
-----
-
-MIT
-
-
-**Free Software, Hell Yeah!**
-
-[//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
-
-
-   [dill]: <https://github.com/joemccann/dillinger>
-   [git-repo-url]: <https://github.com/joemccann/dillinger.git>
-   [john gruber]: <http://daringfireball.net>
-   [df1]: <http://daringfireball.net/projects/markdown/>
-   [markdown-it]: <https://github.com/markdown-it/markdown-it>
-   [Ace Editor]: <http://ace.ajax.org>
-   [node.js]: <http://nodejs.org>
-   [Twitter Bootstrap]: <http://twitter.github.com/bootstrap/>
-   [jQuery]: <http://jquery.com>
-   [@tjholowaychuk]: <http://twitter.com/tjholowaychuk>
-   [express]: <http://expressjs.com>
-   [AngularJS]: <http://angularjs.org>
-   [Gulp]: <http://gulpjs.com>
-
-   [PlDb]: <https://github.com/joemccann/dillinger/tree/master/plugins/dropbox/README.md>
-   [PlGh]: <https://github.com/joemccann/dillinger/tree/master/plugins/github/README.md>
-   [PlGd]: <https://github.com/joemccann/dillinger/tree/master/plugins/googledrive/README.md>
-   [PlOd]: <https://github.com/joemccann/dillinger/tree/master/plugins/onedrive/README.md>
-   [PlMe]: <https://github.com/joemccann/dillinger/tree/master/plugins/medium/README.md>
-   [PlGa]: <https://github.com/RahulHP/dillinger/blob/master/plugins/googleanalytics/README.md>
